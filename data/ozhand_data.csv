@@ -1,0 +1,13 @@
+country,iso3,year,mean_income_ppp,top10_share_pct,bottom10_share_pct,bottom50_share_pct,gini_before_tax
+United States,USA,1990,23889,38.76,1.9,,0.5126
+United States,USA,2010,48643,43.81,1.9,,0.5675
+United States,USA,2020,64402,44.61,1.9,,0.5739
+United States,USA,2024,85810,46.76,1.9,,0.5869
+Germany,DEU,1990,42355,32.55,3.1,21.62,0.4371
+Germany,DEU,2010,54826,36.69,3.1,19.31,0.4802
+Germany,DEU,2020,60300,37.45,3.1,18.8,0.4886
+Germany,DEU,2022,62830,37.64,3.1,18.78,0.4900
+United Kingdom,GBR,1990,16505,32.91,2.9,,0.4600
+United Kingdom,GBR,2010,36484,34.84,2.9,,0.4675
+United Kingdom,GBR,2020,48230,35.79,2.9,,0.4663
+United Kingdom,GBR,2021,62009,36.00,2.9,,0.4683
