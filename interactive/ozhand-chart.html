@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نمودار اوژند — آمریکا، آلمان، انگلیس</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#fafaf8;color:#111;max-width:820px;margin:0 auto;padding:1.5rem}
+h1{font-size:20px;font-weight:600}
+.note{font-size:13px;color:#555;line-height:1.7;background:#f0f0ec;padding:10px 14px;border-radius:8px;margin-bottom:1.5rem}
+.panel{margin-bottom:2.5rem;border-bottom:1px solid #e5e5e0;padding-bottom:1.5rem}
+.panel h2{font-size:16px;margin-bottom:.3rem}
+.charts{display:flex;gap:16px;flex-wrap:wrap}
+.chart-box{flex:1;min-width:280px}
+.chart-box h3{font-size:12px;font-weight:600;color:#666;margin:0 0 4px}
+.detail{font-size:13px;color:#333;margin-top:.75rem;min-height:20px;background:#f5f5f2;padding:8px 12px;border-radius:6px}
+circle{cursor:pointer}
+footer{font-size:12px;color:#777;margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem}
+</style>
+</head>
+<body>
+<h1>نمودار اوژند — مقایسه‌ی سه کشور، ۱۹۹۰ تا ۲۰۲۴</h1>
+<div class="note">
+میانگین (خط ضخیم) = درآمد سرانه واقعی PPP (بانک جهانی). سقف لوله از سهم دهک بالا (WID، سالانه، واقعی). کف لوله برای <strong>آلمان</strong> از سهم واقعی «۵۰٪ پایین» WID ساخته شده؛ برای آمریکا و انگلیس هنوز تقریبیه. <strong>نمودار سمت چپ لگاریتمیه</strong> (برای مقایسه‌ی کشورهای با سطح درآمد خیلی متفاوت) و <strong>نمودار سمت راست خطی و با نسبت واقعی دلاریه</strong> — فاصله‌ی واقعی بین بالا و پایین رو بدون اعوجاج مقیاس لگاریتمی نشون می‌ده. روی هر نقطه (تو هر دو نمودار) کلیک کن تا عدد دقیق دلاری همون سال رو ببینی.
+</div>
+<div id="panels"></div>
+<footer>نمودار اوژند — طراحی و تحلیل: اوژند (b.Ozhand96@gmail.com). داده: World Bank (GDP per capita, PPP)، World Inequality Database — سهم دهک بالا، سهم ۵۰٪ پایین (آلمان)، و ضریب جینی (before tax)، با پردازش Our World in Data.</footer>
+<script>
+const countries=[
+ {id:'us',name:'آمریکا',color:'#185FA5',fill:'#B5D4F4',
+  yrs:[1990,2010,2020,2024],
+  mean:[23889,48643,64402,85810],
+  hi:[92586,213131,287362,401299],
+  lo:[4539,9242,12236,16304],
+  gini:[0.5126,0.5675,0.5739,0.5869]},
+ {id:'de',name:'آلمان',color:'#0F6E56',fill:'#9FE1CB',
+  yrs:[1990,2010,2020,2022],
+  mean:[42355,54826,60300,62830],
+  hi:[137866,201166,225824,236470],
+  lo:[42355*0.2162,54826*0.1931,60300*0.188,62830*0.1878],
+  gini:[0.4371,0.4802,0.4886,0.4900]},
+ {id:'gb',name:'انگلیس',color:'#993C1D',fill:'#F0997B',
+  yrs:[1990,2010,2020,2021],
+  mean:[16505,36484,48230,62009],
+  hi:[54325,127127,172615,223232],
+  lo:[4786,10580,13987,17983],
+  gini:[0.4600,0.4675,0.4663,0.4683]}
+];
+
+function renderChart(el, c, scale){
+  const W=340,H=260,pL=54,pR=14,pT=14,pB=28;
+  const minV=2000,maxV=500000;
+  const x=i=>pL+(W-pL-pR)*(i/(c.yrs.length-1));
+  const ly = scale==='log'
+    ? (v=>{const t=(Math.log10(v)-Math.log10(minV))/(Math.log10(maxV)-Math.log10(minV));return H-pB-(H-pT-pB)*t;})
+    : (v=>{const t=v/maxV;return H-pB-(H-pT-pB)*t;});
+  let d='M'+x(0)+','+ly(c.lo[0]);for(let i=1;i<c.yrs.length;i++)d+=' L'+x(i)+','+ly(c.lo[i]);
+  for(let i=c.yrs.length-1;i>=0;i--)d+=' L'+x(i)+','+ly(c.hi[i]);d+=' Z';
+  let ml='M'+x(0)+','+ly(c.mean[0]);for(let i=1;i<c.yrs.length;i++)ml+=' L'+x(i)+','+ly(c.mean[i]);
+  let grid='';
+  const gridVals = scale==='log' ? [10000,100000] : [100000,200000,300000,400000];
+  gridVals.forEach(g=>{
+    if(g>maxV) return;
+    const gy=ly(g);
+    grid+='<line x1="'+pL+'" x2="'+(W-pR)+'" y1="'+gy+'" y2="'+gy+'" stroke="#ddd"/><text x="'+(pL-6)+'" y="'+(gy+4)+'" text-anchor="end" font-size="10" fill="#888">'+(g/1000)+'K$</text>';
+  });
+  let xl='';c.yrs.forEach((y,i)=>xl+='<text x="'+x(i)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#555">'+y+'</text>');
+  let dots='';c.mean.forEach((m,i)=>{dots+='<circle cx="'+x(i)+'" cy="'+ly(m)+'" r="6" fill="'+c.color+'" onclick="showDetail(\''+c.id+'\','+i+')"/>';});
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%">'+grid+xl+
+    '<path d="'+d+'" fill="'+c.fill+'" fill-opacity="0.55" stroke="'+c.color+'" stroke-width="0.7"/>'+
+    '<path d="'+ml+'" fill="none" stroke="'+c.color+'" stroke-width="3"/>'+dots+'</svg>';
+}
+
+const wrap=document.getElementById('panels');
+countries.forEach(c=>{
+  const div=document.createElement('div');div.className='panel';
+  div.innerHTML='<h2 style="color:'+c.color+'">'+c.name+'</h2>'+
+    '<div class="charts">'+
+      '<div class="chart-box"><h3>لگاریتمی (مقایسه‌ی بین‌کشوری)</h3><div id="log-'+c.id+'"></div></div>'+
+      '<div class="chart-box"><h3>خطی (نسبت واقعی دلاری)</h3><div id="lin-'+c.id+'"></div></div>'+
+    '</div>'+
+    '<div class="detail" id="d-'+c.id+'">روی نقطه‌ها کلیک کن</div>';
+  wrap.appendChild(div);
+  renderChart(document.getElementById('log-'+c.id), c, 'log');
+  renderChart(document.getElementById('lin-'+c.id), c, 'linear');
+});
+
+function showDetail(id,i){
+  const c=countries.find(k=>k.id===id);
+  const fmt=v=>'$'+Math.round(v).toLocaleString();
+  document.getElementById('d-'+id).innerHTML=
+    '<strong>'+c.yrs[i]+':</strong> میانگین '+fmt(c.mean[i])+
+    ' — دهک بالا (میانگین) '+fmt(c.hi[i])+
+    ' — پایین توزیع (میانگین) '+fmt(c.lo[i])+
+    ' — <strong>جینی: '+c.gini[i].toFixed(3)+'</strong>';
+}
+</script>
+</body>
+</html>
