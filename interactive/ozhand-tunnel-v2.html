@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نمودار اوژند — تونل فضایی (نسخه‌ی کامل)</title>
+<style>
+  html,body{margin:0;background:#0b0c10;color:#eee;font-family:Tahoma,Arial,sans-serif;
+    overflow:hidden;height:100%;touch-action:none}
+  #ui{position:absolute;top:0;left:0;right:0;padding:12px 16px;z-index:10;
+      background:linear-gradient(to bottom, rgba(0,0,0,.78), transparent);pointer-events:none}
+  #ui h1{font-size:15px;margin:0 0 4px}
+  #ui p{font-size:11.5px;color:#bbb;line-height:1.6;max-width:660px;margin:0}
+  #ui .warn{color:#e0b84a}
+  #controls{position:absolute;bottom:0;left:0;right:0;padding:10px 16px;z-index:10;
+      background:linear-gradient(to top, rgba(0,0,0,.82), transparent);
+      display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row .label{font-size:11px;color:#999;margin-inline-end:2px}
+  button{background:#1c2333;color:#eee;border:1px solid #3a4560;border-radius:8px;
+      padding:7px 13px;font-size:12.5px}
+  button.active{background:#3a5aa8;border-color:#6d90d6}
+  #hint{position:absolute;bottom:112px;left:0;right:0;text-align:center;font-size:11px;
+      color:#888;pointer-events:none}
+  canvas{display:block;touch-action:none}
+  #panel{position:absolute;top:70px;left:16px;background:rgba(15,17,24,0.92);
+      border:1px solid #333c52;border-radius:10px;padding:12px 14px;
+      width:220px;font-size:12px;display:none;z-index:20}
+  #panel h3{margin:0 0 8px;font-size:13px}
+  #panel .row2{display:flex;justify-content:space-between;margin:4px 0;color:#ccc}
+  #panel .row2 b{color:#fff}
+  #panel svg{margin-top:6px}
+  #panel .note{font-size:10px;color:#e0b84a;margin-top:8px;line-height:1.5}
+  #panel .close{position:absolute;top:6px;left:8px;cursor:pointer;color:#888}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>نمودار اوژند — تونل فضایی چرخشی</h1>
+  <p>
+  محور طولی تونل = سال. شعاع = سطح درآمد. <strong>دیواره‌ی جامد</strong> فقط بین دنباله و بدنه‌ی شمعه؛ <strong>فضای تو‌خالی وسط</strong> = بدنه‌ی اصلی جامعه.
+  یکی از دکمه‌های سال رو بزن تا نمودار شمعی دقیق همون سال رو با عدد واقعی ببینی.
+  <span class="warn">⚠️ نقاط دنباله (انتهای دو سر) تخمینی‌ان، داده‌ی واقعی درصدی نیستن — فقط میانگین دهک بالا/پایین (بدنه) واقعیه.</span>
+  </p>
+</div>
+<div id="hint">با انگشت بکش تا بچرخه — با دو انگشت زوم کن</div>
+<div id="panel">
+  <span class="close" onclick="document.getElementById('panel').style.display='none'">✕</span>
+  <h3 id="panelTitle"></h3>
+  <svg id="candleSvg" width="70" height="160" viewBox="0 0 70 160"></svg>
+  <div id="panelNums"></div>
+  <div class="note">دنباله‌ها تخمینی‌ان؛ میانگین و بدنه (دهک بالا/پایین) واقعی و مستندن.</div>
+</div>
+<div id="controls">
+  <div class="row" id="countryRow"></div>
+  <div class="row">
+    <span class="label">مقیاس:</span>
+    <button id="btnLog" class="active">لگاریتمی</button>
+    <button id="btnLinear">خطی (واقعی)</button>
+  </div>
+  <div class="row" id="yearRow"></div>
+</div>
+<canvas id="c"></canvas>
+<script>
+const DATA = {
+  'آمریکا': {color:[24,95,165], years:[1990,2010,2020,2024], mean:[23889,48643,64402,85810],
+    hi:[92586,213131,287362,401299], lo:[4539,9242,12236,16304]},
+  'آلمان': {color:[15,110,86], years:[1990,2010,2020,2022], mean:[42355,54826,60300,62830],
+    hi:[137866,201166,225824,236470], lo:[9155,10585,11336,11800]},
+  'انگلیس': {color:[153,60,29], years:[1990,2010,2020,2021], mean:[16505,36484,48230,62009],
+    hi:[54325,127127,172615,223232], lo:[4786,10580,13987,17983]}
+};
+Object.values(DATA).forEach(c=>{
+  c.wickHi = c.hi.map(v=>v*2.3);
+  c.wickLo = c.lo.map(v=>v*0.35);
+});
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+let rotY = -0.55, rotX = -0.15, zoom = 1;
+let dragging=false, moved=false, lastX=0, lastY=0, pinchDist=0;
+canvas.addEventListener('pointerdown', e=>{ dragging=true; moved=false; lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointerup', ()=> dragging=false);
+addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  if(Math.abs(e.clientX-lastX)+Math.abs(e.clientY-lastY) > 3) moved=true;
+  rotY += (e.clientX-lastX)*0.008;
+  rotX += (e.clientY-lastY)*0.008;
+  rotX = Math.max(-1.3, Math.min(1.3, rotX));
+  lastX=e.clientX; lastY=e.clientY;
+});
+canvas.addEventListener('wheel', e=>{
+  zoom *= (e.deltaY>0? 0.92:1.08);
+  zoom = Math.max(0.3, Math.min(3, zoom));
+});
+canvas.addEventListener('touchstart', e=>{
+  if(e.touches.length===2) pinchDist = dist(e.touches[0], e.touches[1]);
+}, {passive:true});
+canvas.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    const d = dist(e.touches[0], e.touches[1]);
+    zoom *= d/pinchDist;
+    zoom = Math.max(0.3, Math.min(3, zoom));
+    pinchDist = d;
+  }
+}, {passive:true});
+function dist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+
+function project(p){
+  let x = p[0]*Math.cos(rotY) - p[2]*Math.sin(rotY);
+  let z = p[0]*Math.sin(rotY) + p[2]*Math.cos(rotY);
+  let y = p[1]*Math.cos(rotX) - z*Math.sin(rotX);
+  z = p[1]*Math.sin(rotX) + z*Math.cos(rotX);
+  const persp = 900/(900+z*160*zoom);
+  const scale = 130*zoom*persp;
+  return { x: canvas.width/2 + x*scale, y: canvas.height/2 + y*scale*-1, depth: z };
+}
+
+const LENGTH = 4.2;
+const R_MIN = 0.05, R_MAX = 1.5;
+let scaleMode = 'log';
+
+function radiusMap(v, allVals){
+  if(scaleMode === 'log'){
+    const lo = Math.log10(Math.min(...allVals)*0.4);
+    const hi = Math.log10(Math.max(...allVals)*1.08);
+    const t = (Math.log10(v)-lo)/(hi-lo);
+    return R_MIN + t*(R_MAX-R_MIN);
+  } else {
+    const hi = Math.max(...allVals)*1.05;
+    const t = v/hi;
+    return R_MIN + t*(R_MAX-R_MIN);
+  }
+}
+function interp(years, arr, steps){
+  const out = [];
+  for(let i=0;i<years.length-1;i++){
+    for(let s=0;s<steps;s++){
+      const t = s/steps;
+      out.push({year: years[i]+(years[i+1]-years[i])*t, v: arr[i]+(arr[i+1]-arr[i])*t});
+    }
+  }
+  out.push({year:years[years.length-1], v:arr[arr.length-1]});
+  return out;
+}
+
+let current = 'آمریکا';
+const RADIAL_SEGS = 30;
+
+function buildTunnel(name){
+  const c = DATA[name];
+  const allVals = [...c.wickHi, ...c.wickLo];
+  const y0=c.years[0], y1=c.years[c.years.length-1];
+  const xPos = y => (y-y0)/(y1-y0)*LENGTH - LENGTH/2;
+  const steps = 10;
+  const wLo = interp(c.years, c.wickLo, steps).map(p=>({x:xPos(p.year), r:radiusMap(p.v, allVals)}));
+  const wHi = interp(c.years, c.wickHi, steps).map(p=>({x:xPos(p.year), r:radiusMap(p.v, allVals)}));
+  const bLo = interp(c.years, c.lo, steps).map(p=>({x:xPos(p.year), r:radiusMap(p.v, allVals)}));
+  const bHi = interp(c.years, c.hi, steps).map(p=>({x:xPos(p.year), r:radiusMap(p.v, allVals)}));
+  const mean = interp(c.years, c.mean, steps).map(p=>({x:xPos(p.year), r:radiusMap(p.v, allVals)}));
+  return {wLo, wHi, bLo, bHi, mean, color:c.color};
+}
+
+function ringPoints3D(ring){
+  const pts=[];
+  for(let i=0;i<=RADIAL_SEGS;i++){
+    const a = (i/RADIAL_SEGS)*Math.PI*2;
+    pts.push([ring.x, ring.r*Math.cos(a), ring.r*Math.sin(a)]);
+  }
+  return pts;
+}
+function wallQuads(ringsArr, color, alpha){
+  const quads = [];
+  for(let i=0;i<ringsArr.length-1;i++){
+    const r0 = ringPoints3D(ringsArr[i]);
+    const r1 = ringPoints3D(ringsArr[i+1]);
+    for(let j=0;j<RADIAL_SEGS;j++){
+      const p00=project(r0[j]), p01=project(r0[j+1]), p11=project(r1[j+1]), p10=project(r1[j]);
+      const depth = (p00.depth+p01.depth+p11.depth+p10.depth)/4;
+      quads.push({pts:[p00,p01,p11,p10], depth, color, alpha});
+    }
+  }
+  return quads;
+}
+function drawMeanLine(meanRing){
+  ctx.beginPath();
+  meanRing.forEach((m,i)=>{
+    const p = project([m.x, 0.005, 0]);
+    i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y);
+  });
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = 'rgba(255,255,255,0.55)';
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const d = buildTunnel(current);
+  let allQuads = [];
+  allQuads = allQuads.concat(wallQuads(d.wLo, d.color, 0.55));
+  allQuads = allQuads.concat(wallQuads(d.bLo, d.color, 0.85));
+  allQuads = allQuads.concat(wallQuads(d.bHi, d.color, 0.85));
+  allQuads = allQuads.concat(wallQuads(d.wHi, d.color, 0.5));
+  allQuads.sort((a,b)=>b.depth-a.depth);
+  allQuads.forEach(q=>{
+    ctx.beginPath();
+    ctx.moveTo(q.pts[0].x,q.pts[0].y);
+    for(let k=1;k<4;k++) ctx.lineTo(q.pts[k].x,q.pts[k].y);
+    ctx.closePath();
+    const shade = 0.5 + 0.5*((q.depth+3)/6);
+    const [r,g,b] = q.color;
+    ctx.fillStyle = `rgba(${Math.min(255,r*shade+40)},${Math.min(255,g*shade+40)},${Math.min(255,b*shade+40)},${q.alpha})`;
+    ctx.fill();
+  });
+  drawMeanLine(d.mean);
+  requestAnimationFrame(render);
+}
+render();
+
+const countryRow = document.getElementById('countryRow');
+Object.keys(DATA).forEach((name,i)=>{
+  const btn = document.createElement('button');
+  btn.textContent = name;
+  if(i===0) btn.classList.add('active');
+  btn.onclick = ()=>{
+    document.querySelectorAll('#countryRow button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    current = name;
+    buildYearButtons();
+    document.getElementById('panel').style.display='none';
+  };
+  countryRow.appendChild(btn);
+});
+
+document.getElementById('btnLog').onclick = ()=>{
+  scaleMode='log';
+  document.getElementById('btnLog').classList.add('active');
+  document.getElementById('btnLinear').classList.remove('active');
+};
+document.getElementById('btnLinear').onclick = ()=>{
+  scaleMode='linear';
+  document.getElementById('btnLinear').classList.add('active');
+  document.getElementById('btnLog').classList.remove('active');
+};
+
+function fmt(v){ return '$'+Math.round(v).toLocaleString(); }
+
+function showYearPanel(name, idx){
+  const c = DATA[name];
+  const panel = document.getElementById('panel');
+  document.getElementById('panelTitle').textContent = name+' — '+c.years[idx];
+  const mean=c.mean[idx], hi=c.hi[idx], lo=c.lo[idx];
+  document.getElementById('panelNums').innerHTML = `
+    <div class="row2"><span>میانگین</span><b>${fmt(mean)}</b></div>
+    <div class="row2"><span>دهک بالا (میانگین)</span><b>${fmt(hi)}</b></div>
+    <div class="row2"><span>دهک پایین (میانگین)</span><b>${fmt(lo)}</b></div>
+  `;
+  const svg = document.getElementById('candleSvg');
+  const maxV = c.hi[c.hi.length-1]*2.3, minV = c.lo[c.lo.length-1]*0.35*0.8;
+  const yOf = v => 150 - ( (Math.log10(v)-Math.log10(minV)) / (Math.log10(maxV)-Math.log10(minV)) )*140;
+  const wickTop = c.wickHi[idx], wickBot = c.wickLo[idx];
+  svg.innerHTML = `
+    <line x1="35" y1="${yOf(wickTop)}" x2="35" y2="${yOf(hi)}" stroke="#888" stroke-width="2"/>
+    <line x1="35" y1="${yOf(lo)}" x2="35" y2="${yOf(wickBot)}" stroke="#888" stroke-width="2"/>
+    <rect x="18" y="${yOf(hi)}" width="34" height="${Math.max(2,yOf(lo)-yOf(hi))}" fill="rgba(120,170,255,0.8)" stroke="#9db8ff"/>
+    <line x1="10" y1="${yOf(mean)}" x2="60" y2="${yOf(mean)}" stroke="#fff" stroke-width="2.5"/>
+  `;
+  panel.style.display = 'block';
+}
+
+function buildYearButtons(){
+  const row = document.getElementById('yearRow');
+  row.innerHTML = '<span class="label">سال:</span>';
+  DATA[current].years.forEach((y,idx)=>{
+    const btn = document.createElement('button');
+    btn.textContent = y;
+    btn.onclick = ()=> showYearPanel(current, idx);
+    row.appendChild(btn);
+  });
+}
+buildYearButtons();
+</script>
+</body>
+</html>
