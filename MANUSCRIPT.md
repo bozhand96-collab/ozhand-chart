@@ -61,11 +61,9 @@ This draft is not yet ready for journal submission. Both the top-decile share an
 3. **Novelty framing — done, but needs a direct comparison.** Proper citations for Tukey (1977), the Bank of England fan chart (Britton, Fisher and Whitley, 1998), and the closest precedent — CORE Econ's "Inequality skyscrapers" 3D bar chart — are now in Section 2. What is still missing is a side-by-side figure or worked comparison showing why the Ozhand Chart's 2D tube reads more easily than the CORE Econ 3D bars for a time-trend question; reviewers will ask for this given how close the two designs are.
 4. **Scope note.** Japan was excluded from this draft's worked example because WID's income-share series for Japan is too sparse (effectively one usable data point in 1990–2024) to support either the top-decile-share or Gini components of the method with real annual data.
 
-## 6. Candidate venues
 
-In order of estimated fit and acceptance likelihood: *Journal of Data Science, Statistics and Visualisation* (JDSSV) as the primary target; *Nightingale* (Data Visualization Society magazine) as a faster, lower-barrier venue for initial visibility and feedback; *Significance* (RSS/ASA) as a secondary option. Traditional empirical economics journals (AER, QJE, JEP) are not appropriate venues, since the contribution is a visualization method rather than an empirical economic finding.
 
-## References
+## Reference 
 
 - Britton, E., Fisher, P.G. and Whitley, J.D. (1998). "The Inflation Report projections: understanding the fan chart." *Bank of England Quarterly Bulletin*, 38, pp. 30–37.
 - CORE Econ. "Inequality skyscrapers." Interactive visualization. https://www.core-econ.org/inequality-skyscrapers/
