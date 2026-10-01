@@ -50,7 +50,7 @@ Figure 2 presents the same data as a side-by-side dashboard, with each country's
 Figure 2: The Ozhand Chart, three-country dashboard (USA, Germany, UK), 1990–2024. Light tint: bottom-decile average → mean. Dark tint: mean → top-decile average. Black line: national mean (GDP per capita, PPP).
 An alternative rendering overlays all three countries directly on one shared axis (Figure 3). This makes the relative position of the three national-mean lines easy to compare at a glance, but because the shaded bands themselves partially overlap, their blended colours are harder to read precisely where two or more countries' ranges intersect; we therefore treat Figure 2's side-by-side layout as the primary comparative view and Figure 3 as a complementary, mean-line-focused.
 �![Figure 3: Ozhand Chart, three-country overlay](ozhand_overlay_3country.png)
-Load image
+   
 Figure 3: The Ozhand Chart, all three countries overlaid on one shared axis. Country hue distinguishes the national-mean lines clearly; the shaded bands remain informative but blend together where countries' income ranges overlap.
 Citations for the reused data:
 World Bank, GDP per capita, PPP (current international $).
